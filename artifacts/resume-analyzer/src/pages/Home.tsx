@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileDropzone } from "@/components/file-dropzone";
 import { ScoreRing } from "@/components/score-ring";
+import { ImprovedResumeDraft } from "@/components/improved-resume-draft";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAnalyzeResume, useEvaluateResume } from "@workspace/api-client-react";
@@ -441,6 +442,15 @@ export default function Home() {
                       )}
                     </AnimatePresence>
                   </Card>
+
+                  {/* Improved Resume Draft */}
+                  <ImprovedResumeDraft
+                    resumeText={candidateResult.extractedText}
+                    jobDescription={jobDescription}
+                    matchedKeywords={candidateResult.matchedKeywords}
+                    missingKeywords={candidateResult.missingKeywords}
+                    suggestions={candidateResult.suggestions}
+                  />
                 </motion.div>
               ) : (mode === "recruiter" && recruiterResult) ? (
                 <motion.div

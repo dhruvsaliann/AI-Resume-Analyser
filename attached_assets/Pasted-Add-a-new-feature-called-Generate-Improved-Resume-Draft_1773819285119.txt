@@ -1,0 +1,80 @@
+Add a new feature called “Generate Improved Resume Draft” to the existing Resume Insight Engine.
+
+Goal:
+Allow users to generate a clean, ATS-friendly improved version of their resume using only safe and supported suggestions from the Smart Resume Tailoring feature.
+
+Core rules:
+- Do NOT fabricate experience or skills
+- Do NOT include unsupported keywords
+- Only use suggestions marked as High or Medium support
+- Keep everything realistic and truthful
+- Avoid keyword stuffing
+
+Feature behavior:
+After resume analysis is complete, add a button:
+“Generate Improved Resume Draft”
+
+When clicked:
+- Use the original resume text + job description + supported keyword suggestions
+- Generate a structured improved resume
+
+Output format:
+Return a clean, professional resume draft with these sections:
+
+1. Professional Summary
+- Rewrite to better align with the job description
+
+2. Skills
+- Include relevant and supported skills only
+- Format cleanly for ATS
+
+3. Experience
+- Rewrite bullet points with:
+  - stronger action verbs
+  - clearer impact
+  - natural keyword integration
+
+4. Projects (if present)
+- Improve descriptions to align with the job
+
+5. Notes (optional)
+- Mention if anything needs manual verification
+
+Important:
+- Do NOT try to preserve original formatting
+- Generate a clean, improved version instead
+- Focus on clarity and impact
+
+UI requirements:
+- Add a new card:
+  “Improved Resume Draft”
+- Display formatted content clearly
+- Add:
+  - Copy button
+  - Download as DOCX button
+  - Download as PDF button
+- Add a warning:
+  “This is an AI-generated draft. Please review before use.”
+
+Export requirements:
+- DOCX export:
+  - clean professional formatting
+  - standard fonts
+  - ATS-friendly layout
+- PDF export:
+  - same content as DOCX
+
+Technical requirements:
+- Reuse existing parsed resume + analysis
+- Create a separate function/module for draft generation
+- Use LLM to generate structured output
+- Keep code modular
+- Do not break existing features
+
+Nice-to-have:
+- Toggle:
+  “Use only high-confidence suggestions”
+- Improve wording using strong action verbs
+- Make output natural and not robotic
+
+At the end, explain what files were added or changed.

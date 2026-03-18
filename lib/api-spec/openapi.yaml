@@ -67,6 +67,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /resume/generate-draft:
+    post:
+      operationId: generateResumeDraft
+      tags: [resume]
+      summary: Generate an improved resume draft
+      description: Uses extracted resume text, job description and keyword analysis to generate a clean ATS-friendly improved resume draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateDraftBody"
+      responses:
+        "200":
+          description: Improved resume draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeDraftResult"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /resume/evaluate:
     post:
       operationId: evaluateResume
@@ -210,6 +241,83 @@ components:
         scoreRationale:
           type: string
           description: Brief explanation of the fit score
+    DraftExperienceEntry:
+      type: object
+      required:
+        - role
+        - bullets
+      properties:
+        role:
+          type: string
+        company:
+          type: string
+        duration:
+          type: string
+        bullets:
+          type: array
+          items:
+            type: string
+    DraftProjectEntry:
+      type: object
+      required:
+        - name
+        - bullets
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        bullets:
+          type: array
+          items:
+            type: string
+    ResumeDraftResult:
+      type: object
+      required:
+        - professionalSummary
+        - skills
+        - experience
+      properties:
+        professionalSummary:
+          type: string
+        skills:
+          type: array
+          items:
+            type: string
+        experience:
+          type: array
+          items:
+            $ref: "#/components/schemas/DraftExperienceEntry"
+        projects:
+          type: array
+          items:
+            $ref: "#/components/schemas/DraftProjectEntry"
+        notes:
+          type: string
+    GenerateDraftBody:
+      type: object
+      required:
+        - resumeText
+        - jobDescription
+      properties:
+        resumeText:
+          type: string
+        jobDescription:
+          type: string
+        matchedKeywords:
+          type: array
+          items:
+            type: string
+        missingKeywords:
+          type: array
+          items:
+            type: string
+        suggestions:
+          type: array
+          items:
+            type: string
+        useHighConfidenceOnly:
+          type: boolean
     ErrorResponse:
       type: object
       required:

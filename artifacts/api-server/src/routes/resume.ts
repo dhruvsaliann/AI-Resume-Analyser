@@ -316,4 +316,127 @@ Scoring guidance: 75-100=strong alignment, 50-74=moderate, 0-49=weak. The fitSco
   }
 );
 
+// ─── Generate Improved Resume Draft ─────────────────────────────────────────
+
+router.post(
+  "/resume/generate-draft",
+  async (req: Request, res: Response) => {
+    console.log("[DRAFT] Request received");
+    try {
+      type DraftBody = {
+        resumeText?: string;
+        jobDescription?: string;
+        matchedKeywords?: string[];
+        missingKeywords?: string[];
+        suggestions?: string[];
+        useHighConfidenceOnly?: boolean;
+      };
+      const body = req.body as DraftBody;
+      const resumeText = body.resumeText?.trim();
+      const jobDescription = body.jobDescription?.trim();
+
+      if (!resumeText) {
+        res.status(400).json({ error: "resumeText is required." });
+        return;
+      }
+      if (!jobDescription) {
+        res.status(400).json({ error: "jobDescription is required." });
+        return;
+      }
+
+      const matchedKeywords = body.matchedKeywords ?? [];
+      const missingKeywords = body.missingKeywords ?? [];
+      const suggestions = body.suggestions ?? [];
+
+      const aiPrompt = `You are an expert resume writer creating a clean, ATS-friendly improved resume draft for a job applicant. Your goal is to rewrite the resume content to better align with the target job while staying 100% truthful to the original experience.
+
+RULES:
+- Do NOT fabricate experience, skills, companies, titles, or dates
+- Do NOT include unsupported keywords or claims
+- Only naturally integrate keywords that appear in the job description AND are supported by the resume content
+- Use strong action verbs and quantify achievements where possible (only if data already exists in the resume)
+- Avoid keyword stuffing — make it read naturally
+- Keep the output realistic and professional
+- Do NOT preserve original formatting; generate clean structured output
+
+TARGET JOB DESCRIPTION:
+${jobDescription.slice(0, 2000)}
+
+ORIGINAL RESUME TEXT:
+${resumeText.slice(0, 3000)}
+
+KEYWORDS ALREADY MATCHED: ${matchedKeywords.slice(0, 15).join(", ") || "none"}
+KEYWORDS TO NATURALLY INTEGRATE (only if supported by resume content): ${missingKeywords.slice(0, 15).join(", ") || "none"}
+IMPROVEMENT GUIDANCE: ${suggestions.slice(0, 5).join("; ") || "none"}
+
+Generate an improved resume draft. Respond with ONLY a JSON object (no markdown, no code fences) with exactly these fields:
+{
+  "professionalSummary": "2-3 sentence professional summary tailored to the job description",
+  "skills": ["list of relevant skills from the resume, formatted for ATS, max 15 items"],
+  "experience": [
+    {
+      "role": "Job Title",
+      "company": "Company Name",
+      "duration": "Date range if present in resume",
+      "bullets": ["rewritten bullet point with strong action verb and clear impact", "..."]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Project Name",
+      "description": "Brief description",
+      "bullets": ["improved project detail", "..."]
+    }
+  ],
+  "notes": "Optional: mention anything that needs manual verification or could not be improved without more info"
+}
+
+Only include "projects" if there are projects in the original resume. The "notes" field is optional.`;
+
+      type DraftResult = {
+        professionalSummary: string;
+        skills: string[];
+        experience: Array<{ role: string; company?: string; duration?: string; bullets: string[] }>;
+        projects?: Array<{ name: string; description?: string; bullets: string[] }>;
+        notes?: string;
+      };
+
+      const fallback: DraftResult = {
+        professionalSummary: "Experienced professional with a strong background aligned with the requirements of this role. Skilled in delivering results and collaborating across teams.",
+        skills: matchedKeywords.slice(0, 12),
+        experience: [{ role: "Previous Role", bullets: ["Please review the original resume — AI draft generation could not be completed."] }],
+        notes: "AI draft generation encountered an issue. Please try again.",
+      };
+
+      let draft: DraftResult = fallback;
+
+      console.log("[DRAFT] Sending request to OpenAI...");
+      try {
+        const completion = await openai.chat.completions.create({
+          model: "gpt-5-mini",
+          max_completion_tokens: 2500,
+          messages: [{ role: "user", content: aiPrompt }],
+        });
+        const content = completion.choices[0]?.message?.content ?? "{}";
+        console.log("[DRAFT] OpenAI response received, length:", content.length);
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]) as Partial<DraftResult>;
+          draft = { ...fallback, ...parsed };
+          console.log(`[DRAFT] Parsed draft with ${draft.experience.length} experience entries`);
+        }
+      } catch (aiErr) {
+        console.error("[DRAFT] OpenAI request failed:", aiErr instanceof Error ? aiErr.message : String(aiErr));
+        draft = fallback;
+      }
+
+      console.log("[DRAFT] Sending draft response");
+      res.json(draft);
+    } catch (err) {
+      console.error("[DRAFT] Unexpected error:", err instanceof Error ? err.stack : String(err));
+      res.status(500).json({ error: "An unexpected server error occurred. Please try again." });
+    }
+  }
+);
+
 export default router;

@@ -21,8 +21,10 @@ import type {
   CandidateAnalysisResult,
   ErrorResponse,
   EvaluateResumeBody,
+  GenerateDraftBody,
   HealthStatus,
   RecruiterEvaluationResult,
+  ResumeDraftResult,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -266,6 +268,91 @@ export type EvaluateResumeMutationResult = NonNullable<
 >;
 export type EvaluateResumeMutationBody = BodyType<EvaluateResumeBody>;
 export type EvaluateResumeMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Generate an improved resume draft
+ */
+export const getGenerateResumeDraftUrl = () => {
+  return `/api/resume/generate-draft`;
+};
+
+export const generateResumeDraft = async (
+  generateDraftBody: GenerateDraftBody,
+  options?: RequestInit,
+): Promise<ResumeDraftResult> => {
+  return customFetch<ResumeDraftResult>(getGenerateResumeDraftUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(generateDraftBody),
+  });
+};
+
+export const getGenerateResumeDraftMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateResumeDraft>>,
+    TError,
+    { data: BodyType<GenerateDraftBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateResumeDraft>>,
+  TError,
+  { data: BodyType<GenerateDraftBody> },
+  TContext
+> => {
+  const mutationKey = ["generateResumeDraft"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateResumeDraft>>,
+    { data: BodyType<GenerateDraftBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+    return generateResumeDraft(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateResumeDraftMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateResumeDraft>>
+>;
+export type GenerateResumeDraftMutationBody = BodyType<GenerateDraftBody>;
+export type GenerateResumeDraftMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Generate an improved resume draft
+ */
+export const useGenerateResumeDraft = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateResumeDraft>>,
+    TError,
+    { data: BodyType<GenerateDraftBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateResumeDraft>>,
+  TError,
+  { data: BodyType<GenerateDraftBody> },
+  TContext
+> => {
+  return useMutation(getGenerateResumeDraftMutationOptions(options));
+};
 
 /**
  * @summary Recruiter mode - evaluate candidate fit for a role

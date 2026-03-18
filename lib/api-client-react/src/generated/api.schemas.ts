@@ -86,3 +86,33 @@ export type EvaluateResumeBody = {
   /** Job description text */
   jobDescription: string;
 };
+
+export interface DraftExperienceEntry {
+  role: string;
+  company?: string;
+  duration?: string;
+  bullets: string[];
+}
+
+export interface DraftProjectEntry {
+  name: string;
+  description?: string;
+  bullets: string[];
+}
+
+export interface ResumeDraftResult {
+  professionalSummary: string;
+  skills: string[];
+  experience: DraftExperienceEntry[];
+  projects?: DraftProjectEntry[];
+  notes?: string;
+}
+
+export type GenerateDraftBody = {
+  resumeText: string;
+  jobDescription: string;
+  matchedKeywords?: string[];
+  missingKeywords?: string[];
+  suggestions?: string[];
+  useHighConfidenceOnly?: boolean;
+};
