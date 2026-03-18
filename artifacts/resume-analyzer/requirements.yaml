@@ -1,0 +1,11 @@
+packages:
+  "framer-motion": "For smooth layout transitions and revealing results"
+  "react-dropzone": "For handling PDF file uploads elegantly"
+  "clsx": "Class utility"
+  "tailwind-merge": "Tailwind class merging"
+  "@radix-ui/react-slot": "For polymorphic components"
+images:
+  - path: "artifacts/resume-analyzer/public/images/hero-bg.png"
+    description: "Abstract soft gradient mesh background in professional blues, slate, and pure white. Very clean, bright, and minimal corporate tech style."
+    aspect_ratio: "16:9"
+notes: []

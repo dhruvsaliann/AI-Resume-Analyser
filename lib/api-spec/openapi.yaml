@@ -1,15 +1,16 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: AI Resume Analyzer API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: resume
+    description: Resume analysis operations
 paths:
   /healthz:
     get:
@@ -24,6 +25,48 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /resume/analyze:
+    post:
+      operationId: analyzeResume
+      tags: [resume]
+      summary: Analyze resume against job description
+      description: Upload a PDF resume and provide a job description to get AI-powered analysis
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - resume
+                - jobDescription
+              properties:
+                resume:
+                  type: string
+                  format: binary
+                  description: PDF resume file
+                jobDescription:
+                  type: string
+                  description: Job description text
+      responses:
+        "200":
+          description: Analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeAnalysisResult"
+        "400":
+          description: Bad request (invalid PDF or empty input)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +76,40 @@ components:
           type: string
       required:
         - status
-
+    ResumeAnalysisResult:
+      type: object
+      required:
+        - matchScore
+        - matchedKeywords
+        - missingKeywords
+        - suggestions
+        - extractedText
+      properties:
+        matchScore:
+          type: number
+          description: Match score from 0 to 100
+        matchedKeywords:
+          type: array
+          items:
+            type: string
+          description: Keywords found in both resume and job description
+        missingKeywords:
+          type: array
+          items:
+            type: string
+          description: Keywords in job description but not in resume
+        suggestions:
+          type: array
+          items:
+            type: string
+          description: AI-generated improvement suggestions
+        extractedText:
+          type: string
+          description: Text extracted from the PDF resume
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
