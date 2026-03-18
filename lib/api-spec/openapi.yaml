@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Api
   version: 0.1.0
-  description: AI Resume Analyzer API
+  description: AI Resume Analyzer - Dual Mode Hiring Platform
 servers:
   - url: /api
     description: Base API path
@@ -29,8 +29,8 @@ paths:
     post:
       operationId: analyzeResume
       tags: [resume]
-      summary: Analyze resume against job description
-      description: Upload a PDF resume and provide a job description to get AI-powered analysis
+      summary: Candidate mode - analyze resume against job description
+      description: Upload a PDF resume and provide a job description to get AI-powered candidate analysis
       requestBody:
         required: true
         content:
@@ -50,13 +50,55 @@ paths:
                   description: Job description text
       responses:
         "200":
-          description: Analysis result
+          description: Candidate analysis result
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ResumeAnalysisResult"
+                $ref: "#/components/schemas/CandidateAnalysisResult"
         "400":
-          description: Bad request (invalid PDF or empty input)
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /resume/evaluate:
+    post:
+      operationId: evaluateResume
+      tags: [resume]
+      summary: Recruiter mode - evaluate candidate fit for a role
+      description: Upload a candidate resume PDF and provide a job description to get a recruiter-facing evaluation
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - resume
+                - jobDescription
+              properties:
+                resume:
+                  type: string
+                  format: binary
+                  description: Candidate PDF resume file
+                jobDescription:
+                  type: string
+                  description: Job description text
+      responses:
+        "200":
+          description: Recruiter evaluation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecruiterEvaluationResult"
+        "400":
+          description: Bad request
           content:
             application/json:
               schema:
@@ -76,13 +118,14 @@ components:
           type: string
       required:
         - status
-    ResumeAnalysisResult:
+    CandidateAnalysisResult:
       type: object
       required:
         - matchScore
         - matchedKeywords
         - missingKeywords
         - suggestions
+        - strengths
         - extractedText
       properties:
         matchScore:
@@ -103,9 +146,70 @@ components:
           items:
             type: string
           description: AI-generated improvement suggestions
+        strengths:
+          type: array
+          items:
+            type: string
+          description: AI-identified resume strengths
         extractedText:
           type: string
           description: Text extracted from the PDF resume
+    RecruiterEvaluationResult:
+      type: object
+      required:
+        - fitScore
+        - hiringRecommendation
+        - matchedSkills
+        - missingSkills
+        - experienceSummary
+        - strengths
+        - concerns
+        - nextStep
+        - scoreRationale
+      properties:
+        fitScore:
+          type: number
+          description: Candidate fit score from 0 to 100
+        hiringRecommendation:
+          type: string
+          enum:
+            - Strong Fit
+            - Moderate Fit
+            - Low Fit
+          description: Overall hiring recommendation
+        matchedSkills:
+          type: array
+          items:
+            type: string
+          description: Skills the candidate has that match the role
+        missingSkills:
+          type: array
+          items:
+            type: string
+          description: Required skills missing from the candidate profile
+        experienceSummary:
+          type: string
+          description: Brief summary of candidate experience relevant to the role
+        strengths:
+          type: array
+          items:
+            type: string
+          description: Candidate strengths relevant to the role
+        concerns:
+          type: array
+          items:
+            type: string
+          description: Gaps or concerns about the candidate
+        nextStep:
+          type: string
+          enum:
+            - Shortlist for Screening
+            - Consider with Caution
+            - Not Suitable for This Role
+          description: Recommended recruiter action
+        scoreRationale:
+          type: string
+          description: Brief explanation of the fit score
     ErrorResponse:
       type: object
       required:

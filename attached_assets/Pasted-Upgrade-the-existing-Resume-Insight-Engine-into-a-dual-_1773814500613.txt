@@ -1,0 +1,104 @@
+Upgrade the existing Resume Insight Engine into a dual-mode hiring platform with a premium, modern UI.
+
+Main goal:
+Keep the current candidate-facing resume analyzer, and add a second feature for recruiters to evaluate whether a candidate’s resume is job-worthy for a specific role.
+
+Product structure:
+Create two clearly separated modes at the top of the app with beautiful tabs or segmented controls:
+1. Candidate Mode
+2. Recruiter Mode
+
+Mode 1: Candidate Mode
+Keep the current feature, but polish the UI and output.
+Candidate uploads their resume PDF and pastes a target job description.
+Show:
+- overall match score
+- matched keywords
+- missing keywords
+- resume improvement suggestions
+- strengths of the resume
+- clearer action items
+
+Mode 2: Recruiter Mode
+Add a recruiter-facing workflow.
+Recruiter uploads a candidate resume PDF and pastes a job description.
+The system should evaluate whether the candidate is worth shortlisting.
+
+Recruiter Mode output must include:
+- Candidate Fit Score (0 to 100)
+- Hiring Recommendation: Strong Fit / Moderate Fit / Low Fit
+- Matched Skills
+- Missing Skills
+- Relevant Experience Summary
+- Strengths
+- Concerns / Gaps
+- Suggested Next Step:
+  - shortlist for screening
+  - consider with caution
+  - reject for this role
+
+Scoring logic:
+Use a hybrid approach:
+- keyword overlap and required skills matching
+- LLM-based evaluation for experience relevance, quality, and context
+Make the score feel grounded and realistic, not random.
+
+Prompting logic:
+Use separate prompts for Candidate Mode and Recruiter Mode.
+Candidate Mode should focus on helping improve the resume.
+Recruiter Mode should focus on evaluating job-worthiness and shortlist readiness.
+Do not say “hire this person.”
+Use professional recruiter-style language such as:
+- appears suitable for shortlist review
+- lacks several required qualifications
+- moderate alignment with the role
+
+UI/UX requirements:
+I want the UI to look significantly more polished and premium than it does now.
+
+Design goals:
+- modern SaaS look
+- beautiful spacing
+- smooth rounded cards
+- gradient accents
+- responsive layout
+- strong visual hierarchy
+- elegant tabs or toggle for Candidate/Recruiter mode
+- animated score cards if possible
+- glassmorphism or subtle shadows where appropriate
+- clear side-by-side layout for input and output
+- recruiter mode should feel like a professional hiring dashboard
+- candidate mode should feel supportive and user-friendly
+
+Specific UI components to improve:
+- better hero section
+- better upload card styling
+- better text area styling
+- polished CTA buttons
+- results displayed in attractive cards
+- score shown as a circular progress ring, animated percentage, or premium stat card
+- badges/chips for matched and missing skills
+- recommendation card with clear status color and icon
+- empty state should look professional, not plain
+
+Technical requirements:
+- preserve the current working app
+- add the recruiter feature without breaking candidate mode
+- keep code modular
+- reuse existing PDF parsing logic
+- create separate analysis functions for candidate and recruiter workflows
+- add proper loading states
+- add graceful error handling
+- keep it deployable on Replit
+
+Nice-to-have enhancements:
+- add a small switch or tab subtitle explaining each mode
+- add a sample job description button
+- add a “why this score?” expandable section
+- add downloadable analysis summary if easy
+- make the results feel like a real product, not a student demo
+
+Important:
+Do not rebuild from scratch unless necessary.
+Refactor and extend the current project cleanly.
+Prioritize a beautiful UI and a strong recruiter workflow.
