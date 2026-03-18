@@ -4,7 +4,11 @@ import { createRequire } from "module";
 import { openai } from "@workspace/integrations-openai-ai-server";
 
 const require = createRequire(import.meta.url);
-const pdfParse = require("pdf-parse") as (buffer: Buffer) => Promise<{ text: string }>;
+// pdf-parse v1.1.1 exports a plain function: pdfParse(buffer) => Promise<{text, numpages, info, metadata, version}>
+const pdfParse = require("pdf-parse") as (
+  buffer: Buffer,
+  options?: Record<string, unknown>
+) => Promise<{ text: string; numpages: number; info: Record<string, unknown> }>;
 
 const router: IRouter = Router();
 
@@ -15,7 +19,7 @@ const upload = multer({
     if (file.mimetype === "application/pdf") {
       cb(null, true);
     } else {
-      cb(new Error("Only PDF files are allowed"));
+      cb(null, false);
     }
   },
 });
@@ -37,13 +41,25 @@ const STOP_WORDS = new Set([
   "seeking", "responsible", "responsibilities", "including", "ability",
 ]);
 
-async function parsePdf(buffer: Buffer): Promise<string> {
-  const parsed = await pdfParse(buffer);
-  const text = parsed.text?.trim() ?? "";
-  if (!text) {
-    throw new Error("Could not extract text from the PDF. Make sure the PDF is not image-only or password-protected.");
+async function parsePdf(buffer: Buffer, filename: string): Promise<string> {
+  console.log(`[PDF] Parsing file: ${filename} (${buffer.length} bytes)`);
+  try {
+    const parsed = await pdfParse(buffer);
+    const text = parsed.text?.trim() ?? "";
+    console.log(`[PDF] Extracted ${text.length} characters from ${parsed.numpages} page(s)`);
+    if (!text || text.length < 10) {
+      throw new Error(
+        "PDF appears to be image-based or password-protected — no readable text could be extracted. Please use a text-based PDF."
+      );
+    }
+    return text;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[PDF] Parse failed:`, msg);
+    // Re-throw user-friendly messages as-is; wrap other errors
+    if (msg.includes("no readable text") || msg.includes("image-based")) throw err;
+    throw new Error("Failed to parse the PDF. The file may be corrupted, encrypted, or not a valid PDF.");
   }
-  return text;
 }
 
 function extractKeywords(text: string): string[] {
@@ -78,30 +94,40 @@ function computeKeywordMatch(resumeText: string, jobText: string) {
   return { matched, missing, keywordScore };
 }
 
+// ─── Candidate Analysis ─────────────────────────────────────────────────────
+
 router.post(
   "/resume/analyze",
   upload.single("resume"),
   async (req: Request, res: Response) => {
+    console.log("[ANALYZE] Request received");
     try {
       if (!req.file) {
-        res.status(400).json({ error: "No PDF file uploaded" });
-        return;
-      }
-      const jobDescription = (req.body as { jobDescription?: string }).jobDescription?.trim();
-      if (!jobDescription) {
-        res.status(400).json({ error: "Job description is required" });
+        console.error("[ANALYZE] No file uploaded or non-PDF rejected");
+        res.status(400).json({ error: "No PDF file uploaded. Please select a .pdf file." });
         return;
       }
 
+      console.log(`[ANALYZE] File received: ${req.file.originalname} (${req.file.size} bytes, ${req.file.mimetype})`);
+
+      const jobDescription = (req.body as { jobDescription?: string }).jobDescription?.trim();
+      if (!jobDescription) {
+        res.status(400).json({ error: "Job description is required." });
+        return;
+      }
+      console.log(`[ANALYZE] Job description length: ${jobDescription.length} chars`);
+
       let extractedText: string;
       try {
-        extractedText = await parsePdf(req.file.buffer);
+        extractedText = await parsePdf(req.file.buffer, req.file.originalname);
       } catch (err) {
-        res.status(400).json({ error: err instanceof Error ? err.message : "Failed to parse PDF." });
+        const msg = err instanceof Error ? err.message : "Failed to parse PDF.";
+        res.status(400).json({ error: msg });
         return;
       }
 
       const { matched, missing, keywordScore } = computeKeywordMatch(extractedText, jobDescription);
+      console.log(`[ANALYZE] Keyword match: ${keywordScore}% (${matched.length} matched, ${missing.length} missing)`);
 
       const aiPrompt = `You are a professional resume coach helping a job seeker improve their resume.
 
@@ -114,7 +140,7 @@ ${extractedText.slice(0, 3000)}
 KEYWORD MATCH SCORE: ${keywordScore}%
 MISSING KEYWORDS: ${missing.slice(0, 20).join(", ")}
 
-Analyze this resume and respond with ONLY a JSON object (no markdown, no extra text) with exactly these fields:
+Analyze this resume and respond with ONLY a JSON object (no markdown, no code fences) with exactly these fields:
 {
   "suggestions": ["5-7 specific actionable improvement tips to better align with this job"],
   "strengths": ["3-5 genuine resume strengths relevant to this job"]
@@ -126,6 +152,7 @@ Focus strengths on: what the candidate already does well for this specific role.
       let suggestions: string[] = [];
       let strengths: string[] = [];
 
+      console.log("[ANALYZE] Sending request to OpenAI...");
       try {
         const completion = await openai.chat.completions.create({
           model: "gpt-5-mini",
@@ -133,13 +160,16 @@ Focus strengths on: what the candidate already does well for this specific role.
           messages: [{ role: "user", content: aiPrompt }],
         });
         const content = completion.choices[0]?.message?.content ?? "{}";
+        console.log("[ANALYZE] OpenAI response received, length:", content.length);
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]) as { suggestions?: string[]; strengths?: string[] };
           suggestions = parsed.suggestions ?? [];
           strengths = parsed.strengths ?? [];
+          console.log(`[ANALYZE] Parsed: ${suggestions.length} suggestions, ${strengths.length} strengths`);
         }
-      } catch {
+      } catch (aiErr) {
+        console.error("[ANALYZE] OpenAI request failed:", aiErr instanceof Error ? aiErr.message : String(aiErr));
         suggestions = [
           "Add more keywords from the job description to improve ATS compatibility.",
           "Quantify your achievements with specific numbers and percentages.",
@@ -153,45 +183,57 @@ Focus strengths on: what the candidate already does well for this specific role.
         ];
       }
 
-      res.json({
+      const responsePayload = {
         matchScore: keywordScore,
         matchedKeywords: matched.slice(0, 30),
         missingKeywords: missing.slice(0, 30),
         suggestions,
         strengths,
         extractedText,
-      });
+      };
+      console.log("[ANALYZE] Sending response with matchScore:", responsePayload.matchScore);
+      res.json(responsePayload);
     } catch (err) {
-      console.error("Resume analyze error:", err);
-      res.status(500).json({ error: "An unexpected error occurred. Please try again." });
+      console.error("[ANALYZE] Unexpected error:", err instanceof Error ? err.stack : String(err));
+      res.status(500).json({ error: "An unexpected server error occurred. Please try again." });
     }
   }
 );
+
+// ─── Recruiter Evaluation ────────────────────────────────────────────────────
 
 router.post(
   "/resume/evaluate",
   upload.single("resume"),
   async (req: Request, res: Response) => {
+    console.log("[EVALUATE] Request received");
     try {
       if (!req.file) {
-        res.status(400).json({ error: "No PDF file uploaded" });
-        return;
-      }
-      const jobDescription = (req.body as { jobDescription?: string }).jobDescription?.trim();
-      if (!jobDescription) {
-        res.status(400).json({ error: "Job description is required" });
+        console.error("[EVALUATE] No file uploaded or non-PDF rejected");
+        res.status(400).json({ error: "No PDF file uploaded. Please select a .pdf file." });
         return;
       }
 
+      console.log(`[EVALUATE] File received: ${req.file.originalname} (${req.file.size} bytes, ${req.file.mimetype})`);
+
+      const jobDescription = (req.body as { jobDescription?: string }).jobDescription?.trim();
+      if (!jobDescription) {
+        res.status(400).json({ error: "Job description is required." });
+        return;
+      }
+      console.log(`[EVALUATE] Job description length: ${jobDescription.length} chars`);
+
       let extractedText: string;
       try {
-        extractedText = await parsePdf(req.file.buffer);
+        extractedText = await parsePdf(req.file.buffer, req.file.originalname);
       } catch (err) {
-        res.status(400).json({ error: err instanceof Error ? err.message : "Failed to parse PDF." });
+        const msg = err instanceof Error ? err.message : "Failed to parse PDF.";
+        res.status(400).json({ error: msg });
         return;
       }
 
       const { matched, missing, keywordScore } = computeKeywordMatch(extractedText, jobDescription);
+      console.log(`[EVALUATE] Keyword match: ${keywordScore}% (${matched.length} matched, ${missing.length} missing)`);
 
       const aiPrompt = `You are a senior recruiter evaluating a candidate resume for a specific role. Be analytical, objective, and use professional recruiter language. Do not say "hire this person" — use language like "appears suitable for shortlist review", "lacks several required qualifications", "moderate alignment with the role".
 
@@ -204,9 +246,9 @@ ${extractedText.slice(0, 3000)}
 KEYWORD OVERLAP: ${keywordScore}% (${matched.slice(0, 15).join(", ") || "none"})
 MISSING KEYWORDS: ${missing.slice(0, 15).join(", ") || "none"}
 
-Evaluate this candidate's suitability for the role. Respond with ONLY a JSON object (no markdown, no extra text) with exactly these fields:
+Evaluate this candidate's suitability for the role. Respond with ONLY a JSON object (no markdown, no code fences) with exactly these fields:
 {
-  "fitScore": <integer 0-100, weighted blend of keyword match and experience/quality assessment>,
+  "fitScore": <integer 0-100>,
   "hiringRecommendation": <"Strong Fit" | "Moderate Fit" | "Low Fit">,
   "matchedSkills": ["up to 10 specific matched skills/competencies"],
   "missingSkills": ["up to 10 important missing skills or qualifications"],
@@ -217,24 +259,9 @@ Evaluate this candidate's suitability for the role. Respond with ONLY a JSON obj
   "scoreRationale": "1-2 sentence explanation of why you gave this fit score"
 }
 
-Scoring guidance:
-- 75-100: Strong alignment — majority of required skills present, experience appears highly relevant
-- 50-74: Moderate alignment — some gaps but core qualifications are evident  
-- 0-49: Weak alignment — significant skill or experience gaps for this specific role
+Scoring guidance: 75-100=strong alignment, 50-74=moderate, 0-49=weak. The fitScore must reflect experience quality and role relevance, not just keyword overlap.`;
 
-The fitScore must be a grounded, realistic assessment — not just keyword overlap. Weigh experience quality, role relevance, and overall candidate profile.`;
-
-      let evalResult = {
-        fitScore: keywordScore,
-        hiringRecommendation: keywordScore >= 75 ? "Strong Fit" : keywordScore >= 50 ? "Moderate Fit" : "Low Fit",
-        matchedSkills: matched.slice(0, 10),
-        missingSkills: missing.slice(0, 10),
-        experienceSummary: "Unable to generate a detailed summary at this time. Please review the resume manually.",
-        strengths: ["Candidate submitted a structured resume.", "Some keyword alignment detected with the role."],
-        concerns: ["Full AI evaluation could not be completed."],
-        nextStep: keywordScore >= 75 ? "Shortlist for Screening" : keywordScore >= 50 ? "Consider with Caution" : "Not Suitable for This Role",
-        scoreRationale: `Based on ${keywordScore}% keyword match with the job description.`,
-      } as {
+      type EvalResult = {
         fitScore: number;
         hiringRecommendation: string;
         matchedSkills: string[];
@@ -246,6 +273,21 @@ The fitScore must be a grounded, realistic assessment — not just keyword overl
         scoreRationale: string;
       };
 
+      const fallback: EvalResult = {
+        fitScore: keywordScore,
+        hiringRecommendation: keywordScore >= 75 ? "Strong Fit" : keywordScore >= 50 ? "Moderate Fit" : "Low Fit",
+        matchedSkills: matched.slice(0, 10),
+        missingSkills: missing.slice(0, 10),
+        experienceSummary: "Automated evaluation could not be completed. Please review the resume manually.",
+        strengths: ["Some keyword alignment detected with the role requirements."],
+        concerns: ["Full AI evaluation could not be completed — manual review recommended."],
+        nextStep: keywordScore >= 75 ? "Shortlist for Screening" : keywordScore >= 50 ? "Consider with Caution" : "Not Suitable for This Role",
+        scoreRationale: `Based on ${keywordScore}% keyword overlap with the job description.`,
+      };
+
+      let evalResult: EvalResult = fallback;
+
+      console.log("[EVALUATE] Sending request to OpenAI...");
       try {
         const completion = await openai.chat.completions.create({
           model: "gpt-5-mini",
@@ -253,19 +295,23 @@ The fitScore must be a grounded, realistic assessment — not just keyword overl
           messages: [{ role: "user", content: aiPrompt }],
         });
         const content = completion.choices[0]?.message?.content ?? "{}";
+        console.log("[EVALUATE] OpenAI response received, length:", content.length);
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]) as typeof evalResult;
-          evalResult = { ...evalResult, ...parsed };
+          const parsed = JSON.parse(jsonMatch[0]) as Partial<EvalResult>;
+          evalResult = { ...fallback, ...parsed };
+          console.log(`[EVALUATE] fitScore=${evalResult.fitScore}, recommendation="${evalResult.hiringRecommendation}"`);
         }
       } catch (aiErr) {
-        console.warn("AI evaluation failed, using fallback:", aiErr);
+        console.error("[EVALUATE] OpenAI request failed:", aiErr instanceof Error ? aiErr.message : String(aiErr));
+        evalResult = fallback;
       }
 
+      console.log("[EVALUATE] Sending evaluation response");
       res.json(evalResult);
     } catch (err) {
-      console.error("Resume evaluate error:", err);
-      res.status(500).json({ error: "An unexpected error occurred. Please try again." });
+      console.error("[EVALUATE] Unexpected error:", err instanceof Error ? err.stack : String(err));
+      res.status(500).json({ error: "An unexpected server error occurred. Please try again." });
     }
   }
 );

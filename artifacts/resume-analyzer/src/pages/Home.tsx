@@ -62,11 +62,38 @@ export default function Home() {
 
   const handleAnalyze = () => {
     if (!file || !jobDescription.trim()) return;
+    console.log(`[Frontend] Starting ${mode} analysis`);
+    console.log(`[Frontend] File: ${file.name} (${(file.size / 1024).toFixed(1)} KB, ${file.type})`);
+    console.log(`[Frontend] Job description length: ${jobDescription.length} chars`);
     
     if (mode === "candidate") {
-      analyzeMutation.mutate({ data: { resume: file, jobDescription } });
+      analyzeMutation.mutate(
+        { data: { resume: file, jobDescription } },
+        {
+          onSuccess: (data) => {
+            console.log("[Frontend] Analysis succeeded, matchScore:", data.matchScore);
+          },
+          onError: (err) => {
+            console.error("[Frontend] Analysis failed:", err);
+            console.error("[Frontend] Error data:", (err as { data?: unknown }).data);
+            console.error("[Frontend] Error message:", err.message);
+          },
+        }
+      );
     } else {
-      evaluateMutation.mutate({ data: { resume: file, jobDescription } });
+      evaluateMutation.mutate(
+        { data: { resume: file, jobDescription } },
+        {
+          onSuccess: (data) => {
+            console.log("[Frontend] Evaluation succeeded, fitScore:", data.fitScore);
+          },
+          onError: (err) => {
+            console.error("[Frontend] Evaluation failed:", err);
+            console.error("[Frontend] Error data:", (err as { data?: unknown }).data);
+            console.error("[Frontend] Error message:", err.message);
+          },
+        }
+      );
     }
   };
 
@@ -74,7 +101,12 @@ export default function Home() {
   
   const isPending = analyzeMutation.isPending || evaluateMutation.isPending;
   const isError = analyzeMutation.isError || evaluateMutation.isError;
-  const errorMsg = analyzeMutation.error?.response?.data?.error || evaluateMutation.error?.response?.data?.error;
+  // ApiError has a .data field (parsed response body) — not .response.data
+  const errorMsg =
+    (analyzeMutation.error?.data as { error?: string } | null)?.error ||
+    (evaluateMutation.error?.data as { error?: string } | null)?.error ||
+    analyzeMutation.error?.message ||
+    evaluateMutation.error?.message;
 
   const candidateResult = analyzeMutation.data;
   const recruiterResult = evaluateMutation.data;
