@@ -65,7 +65,7 @@ async function parsePdf(buffer: Buffer, filename: string): Promise<string> {
 function extractKeywords(text: string): string[] {
   const words = text
     .toLowerCase()
-    .replace(/[^a-z0-9+#.\s-]/g, " ")
+    .replace(/[^a-z0-9+#\s-]/g, " ")
     .split(/\s+/)
     .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
 
@@ -143,6 +143,9 @@ MISSING KEYWORDS: ${missing.slice(0, 20).join(", ")}
 Analyze this resume and respond with ONLY a JSON object (no markdown, no code fences) with exactly these fields:
 {
   "suggestions": ["5-7 specific actionable improvement tips to better align with this job"],
+  "aiScore": <integer 0-100 semantic fit score based on actual experience>,
+  "aiScoreRationale": "2 sentence explanation",
+  "suggestions": ["5-7 specific actionable improvement tips"],
   "strengths": ["3-5 genuine resume strengths relevant to this job"]
 }
 
@@ -151,22 +154,26 @@ Focus strengths on: what the candidate already does well for this specific role.
 
       let suggestions: string[] = [];
       let strengths: string[] = [];
+      let aiScore: number = keywordScore;
+      let aiScoreRationale: string = "";
 
       console.log("[ANALYZE] Sending request to OpenAI...");
       try {
         const completion = await openai.chat.completions.create({
-          model: "gpt-5-mini",
-          max_completion_tokens: 1200,
+          model: "llama-3.3-70b-versatile",
+          max_tokens: 1200,
           messages: [{ role: "user", content: aiPrompt }],
         });
         const content = completion.choices[0]?.message?.content ?? "{}";
         console.log("[ANALYZE] OpenAI response received, length:", content.length);
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]) as { suggestions?: string[]; strengths?: string[] };
+          const parsed = JSON.parse(jsonMatch[0]) as { suggestions?: string[]; strengths?: string[]; aiScore?: number; aiScoreRationale?: string };
           suggestions = parsed.suggestions ?? [];
           strengths = parsed.strengths ?? [];
-          console.log(`[ANALYZE] Parsed: ${suggestions.length} suggestions, ${strengths.length} strengths`);
+          aiScore = parsed.aiScore ?? keywordScore;
+          aiScoreRationale = parsed.aiScoreRationale ?? "";
+          console.log(`[ANALYZE] Parsed: ${suggestions.length} suggestions, aiScore: ${aiScore}`);
         }
       } catch (aiErr) {
         console.error("[ANALYZE] OpenAI request failed:", aiErr instanceof Error ? aiErr.message : String(aiErr));
@@ -185,6 +192,8 @@ Focus strengths on: what the candidate already does well for this specific role.
 
       const responsePayload = {
         matchScore: keywordScore,
+        aiScore,
+        aiScoreRationale,
         matchedKeywords: matched.slice(0, 30),
         missingKeywords: missing.slice(0, 30),
         suggestions,
@@ -290,8 +299,8 @@ Scoring guidance: 75-100=strong alignment, 50-74=moderate, 0-49=weak. The fitSco
       console.log("[EVALUATE] Sending request to OpenAI...");
       try {
         const completion = await openai.chat.completions.create({
-          model: "gpt-5-mini",
-          max_completion_tokens: 1500,
+          model: "llama-3.3-70b-versatile",
+          max_tokens: 1500,
           messages: [{ role: "user", content: aiPrompt }],
         });
         const content = completion.choices[0]?.message?.content ?? "{}";
@@ -413,8 +422,8 @@ Only include "projects" if there are projects in the original resume. The "notes
       console.log("[DRAFT] Sending request to OpenAI...");
       try {
         const completion = await openai.chat.completions.create({
-          model: "gpt-5-mini",
-          max_completion_tokens: 2500,
+          model: "llama-3.3-70b-versatile",
+          max_tokens: 2500,
           messages: [{ role: "user", content: aiPrompt }],
         });
         const content = completion.choices[0]?.message?.content ?? "{}";

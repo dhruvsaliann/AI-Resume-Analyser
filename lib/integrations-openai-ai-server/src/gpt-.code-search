@@ -1,0 +1,136 @@
+# Query: gpt-
+# ContextLines: 1
+
+31 results - 8 files
+
+replit.md:
+  17  - **Build**: esbuild (CJS bundle)
+  18: - **AI**: OpenAI via Replit AI Integrations (gpt-5-mini)
+  19  
+
+  74  - Keyword extraction and match scoring (NLP)
+  75: - AI suggestions via OpenAI gpt-5-mini
+  76  - File uploads via `multer` (memory storage, PDF only, 10MB limit)
+
+artifacts/api-server/src/routes/resume.ts:
+  157          const completion = await openai.chat.completions.create({
+  158:           model: "gemini-2.0-flash",
+  159            max_completion_tokens: 1200,
+
+  292          const completion = await openai.chat.completions.create({
+  293:           model: "gemini-2.0-flash",
+  294            max_completion_tokens: 1500,
+
+  415          const completion = await openai.chat.completions.create({
+  416:           model: "gemini-2.0-flash",
+  417            max_completion_tokens: 2500,
+
+lib/integrations/openai_ai_integrations/src/server/audio/client.ts:
+   98  
+   99: /** Voice Chat: audio-in, audio-out using gpt-audio. */
+  100  export async function voiceChat(
+
+  107    const response = await openai.chat.completions.create({
+  108:     model: "gpt-audio",
+  109      modalities: ["text", "audio"],
+
+  134    const stream = await openai.chat.completions.create({
+  135:     model: "gpt-audio",
+  136      modalities: ["text", "audio"],
+
+  160  
+  161: /** Text-to-Speech using gpt-audio. */
+  162  export async function textToSpeech(
+
+  167    const response = await openai.chat.completions.create({
+  168:     model: "gpt-audio",
+  169      modalities: ["text", "audio"],
+
+  185    const stream = await openai.chat.completions.create({
+  186:     model: "gpt-audio",
+  187      modalities: ["text", "audio"],
+
+  206  
+  207: /** Speech-to-Text using gpt-4o-mini-transcribe. */
+  208  export async function speechToText(
+
+  214      file,
+  215:     model: "gemini-2.0-flash",
+  216    });
+
+  227      file,
+  228:     model: "gemini-2.0-flash",
+  229      stream: true,
+
+lib/integrations/openai_ai_integrations/src/server/batch/utils.ts:
+  19   *     const response = await openai.chat.completions.create({
+  20:  *       model: "gemini-2.0-flash",
+  21   *       messages: [{ role: "user", content: `Categorize: ${artwork.name}` }],
+
+lib/integrations/openai_ai_integrations/src/server/image/client.ts:
+  11   * Generate an image and return as Buffer.
+  12:  * Uses gpt-image-1 model via Replit AI Integrations.
+  13   */
+
+  18    const response = await openai.images.generate({
+  19:     model: "gpt-image-1",
+  20      prompt,
+
+  28   * Edit/combine multiple images into a composite.
+  29:  * Uses gpt-image-1 model via Replit AI Integrations.
+  30   */
+
+  44    const response = await openai.images.edit({
+  45:     model: "gpt-image-1",
+  46      image: images,
+
+lib/integrations-openai-ai-server/src/audio/client.ts:
+  110  
+  111: /** Voice Chat: audio-in, audio-out using gpt-audio. */
+  112  export async function voiceChat(
+
+  119    const response = await openai.chat.completions.create({
+  120:     model: "gpt-audio",
+  121      modalities: ["text", "audio"],
+
+  146    const stream = await openai.chat.completions.create({
+  147:     model: "gpt-audio",
+  148      modalities: ["text", "audio"],
+
+  172  
+  173: /** Text-to-Speech using gpt-audio. */
+  174  export async function textToSpeech(
+
+  179    const response = await openai.chat.completions.create({
+  180:     model: "gpt-audio",
+  181      modalities: ["text", "audio"],
+
+  197    const stream = await openai.chat.completions.create({
+  198:     model: "gpt-audio",
+  199      modalities: ["text", "audio"],
+
+  218  
+  219: /** Speech-to-Text using gpt-4o-mini-transcribe. */
+  220  export async function speechToText(
+
+  226      file,
+  227:     model: "gemini-2.0-flash",
+  228    });
+
+  239      file,
+  240:     model: "gemini-2.0-flash",
+  241      stream: true,
+
+lib/integrations-openai-ai-server/src/batch/utils.ts:
+  18   *     const response = await openai.chat.completions.create({
+  19:  *       model: "gemini-2.0-flash",
+  20   *       messages: [{ role: "user", content: `Categorize: ${artwork.name}` }],
+
+lib/integrations-openai-ai-server/src/image/client.ts:
+  26    const response = await openai.images.generate({
+  27:     model: "gpt-image-1",
+  28      prompt,
+
+  48    const response = await openai.images.edit({
+  49:     model: "gpt-image-1",
+  50      image: images,

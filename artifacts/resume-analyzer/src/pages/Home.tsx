@@ -306,16 +306,30 @@ export default function Home() {
                   {/* Candidate Score Card */}
                   <Card className="overflow-hidden border-0 shadow-xl shadow-primary/5 bg-gradient-to-br from-white to-slate-50/80">
                     <CardContent className="p-8 sm:p-10 flex flex-col sm:flex-row items-center gap-8 sm:gap-10">
-                      <div className="shrink-0 bg-white p-4 rounded-3xl shadow-sm border border-slate-100">
-                        <ScoreRing score={candidateResult.matchScore} />
+                      <div className="shrink-0 flex flex-col items-center gap-4">
+                        <div className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100">
+                          <ScoreRing score={(candidateResult as any).aiScore ?? candidateResult.matchScore} />
+                        </div>
+                        <div className="text-center bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-2">
+                          <p className="text-xs text-slate-500 font-medium">Keyword Match</p>
+                          <p className="text-lg font-bold text-slate-700 dark:text-slate-300">{candidateResult.matchScore}%</p>
+                        </div>
                       </div>
                       <div className="text-center sm:text-left">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-3">
+                          AI Semantic Score
+                        </div>
                         <h2 className="text-3xl font-display font-bold text-slate-900 mb-3">
-                          {candidateResult.matchScore >= 75 ? "Excellent Match!" : candidateResult.matchScore >= 50 ? "Good Potential" : "Needs Optimization"}
+                          {((candidateResult as any).aiScore ?? candidateResult.matchScore) >= 75 ? "Excellent Match!" : ((candidateResult as any).aiScore ?? candidateResult.matchScore) >= 50 ? "Good Potential" : "Needs Optimization"}
                         </h2>
-                        <p className="text-slate-600 leading-relaxed text-lg">
-                          Your resume matches <strong className="text-slate-900 font-bold">{candidateResult.matchScore}%</strong> of the job description requirements. Review the insights below to improve your chances of getting an interview.
+                        <p className="text-slate-600 leading-relaxed text-lg mb-3">
+                          AI rates your fit at <strong className="text-slate-900 font-bold">{(candidateResult as any).aiScore ?? candidateResult.matchScore}%</strong> based on your actual experience and relevance.
                         </p>
+                        {(candidateResult as any).aiScoreRationale && (
+                          <p className="text-sm text-slate-500 italic border-l-2 border-primary/30 pl-3">
+                            {(candidateResult as any).aiScoreRationale}
+                          </p>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

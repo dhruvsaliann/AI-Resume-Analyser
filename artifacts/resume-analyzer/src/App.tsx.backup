@@ -1,0 +1,85 @@
+import { Switch, Route, Router as WouterRouter, Link, useLocation } from "wouter";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { useTheme } from "next-themes";
+import { Moon, Sun } from "lucide-react";
+import Home from "@/pages/Home";
+import AtsConverter from "@/pages/AtsConverter";
+import NotFound from "@/pages/not-found";
+import { cn } from "@/lib/utils";
+
+const queryClient = new QueryClient();
+
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  return (
+    <button
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      className="ml-auto p-2 rounded-lg text-slate-600 hover:text-primary hover:bg-primary/10 transition-colors dark:text-slate-300"
+    >
+      <Sun className="w-5 h-5 hidden dark:block" />
+      <Moon className="w-5 h-5 block dark:hidden" />
+    </button>
+  );
+}
+
+function Nav() {
+  const [location] = useLocation();
+  return (
+    <nav className="sticky top-0 z-50 bg-white/80 dark:bg-[#1e1e1e]/80 backdrop-blur-md border-b border-slate-200 dark:border-[#3e3e42] shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-8 h-14">
+          <span className="font-bold text-primary text-lg">Resume AI</span>
+          <div className="flex gap-2">
+            <Link href="/">
+              <a className={cn(
+                "px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors",
+                location === "/" ? "bg-primary text-white" : "text-slate-600 dark:text-slate-300 hover:text-primary hover:bg-primary/10"
+              )}>
+                Analyzer
+              </a>
+            </Link>
+            <Link href="/ats-converter">
+              <a className={cn(
+                "px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors",
+                location === "/ats-converter" ? "bg-primary text-white" : "text-slate-600 dark:text-slate-300 hover:text-primary hover:bg-primary/10"
+              )}>
+                ATS Converter
+              </a>
+            </Link>
+          </div>
+          <ThemeToggle />
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+function Router() {
+  return (
+    <>
+      <Nav />
+      <Switch>
+        <Route path="/" component={Home} />
+        <Route path="/ats-converter" component={AtsConverter} />
+        <Route component={NotFound} />
+      </Switch>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <Router />
+        </WouterRouter>
+        <Toaster />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
+
+export default App;
