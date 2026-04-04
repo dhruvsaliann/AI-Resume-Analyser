@@ -32,9 +32,12 @@ catalog:
 minimumReleaseAge: 1440
 
 onlyBuiltDependencies:
+  - '@firebase/util'
   - '@swc/core'
+  - core-js
   - esbuild
   - msw
+  - protobufjs
   - unrs-resolver
 
 overrides:
