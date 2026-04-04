@@ -1,14 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import multer from "multer";
 import { openai } from "@workspace/integrations-openai-ai-server";
-import { createRequire } from "module";
-
-// Use a CJS-safe require — falls back gracefully when import.meta.url is unavailable (esbuild CJS bundles)
-const _require = typeof require !== "undefined" ? require : createRequire(import.meta.url);
-const pdfParse = _require("pdf-parse") as (
-  buffer: Buffer,
-  options?: Record<string, unknown>
-) => Promise<{ text: string; numpages: number; info: Record<string, unknown> }>;
+import pdfParse from "pdf-parse/lib/pdf-parse.js";
 
 const router: IRouter = Router();
 
