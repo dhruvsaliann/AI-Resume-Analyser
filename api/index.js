@@ -1,2 +1,2 @@
-const handler = require("../artifacts/api-server/dist/handler.cjs");
+const handler = require("./handler.cjs");
 module.exports = handler.default ?? handler;

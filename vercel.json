@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm --filter @workspace/resume-analyzer run build && pnpm --filter @workspace/api-server run build",
+  "buildCommand": "pnpm --filter @workspace/resume-analyzer run build && pnpm --filter @workspace/api-server run build && cp artifacts/api-server/dist/handler.cjs api/handler.cjs",
   "outputDirectory": "artifacts/resume-analyzer/dist/public",
   "installCommand": "pnpm install",
   "framework": null,
